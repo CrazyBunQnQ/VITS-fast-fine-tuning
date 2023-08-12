@@ -8,3 +8,6 @@
 .idea
 /long_character_anno.txt
 /short_character_anno.txt
+/whisper_model/
+/final_annotation_train.txt
+/final_annotation_val.txt
