@@ -137,6 +137,7 @@ if __name__ == "__main__":
         for i, line in enumerate(new_annos):
             path, speaker, txt = line.split("|")
             if len(txt) > 150:
+                print(f"Text too long: {txt}")
                 continue
             # cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
             # 将 txt 中的 [ZH] 替换为空
