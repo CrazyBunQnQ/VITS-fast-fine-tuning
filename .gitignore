@@ -1,0 +1,10 @@
+/custom_character_voice/
+/pretrained_models/
+/short_character_anno.txt
+/raw_audio/
+/denoised_audio/
+/separated/
+/segmented_character_voice/
+.idea
+/long_character_anno.txt
+/short_character_anno.txt

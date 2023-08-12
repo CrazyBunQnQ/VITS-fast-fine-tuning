@@ -10,8 +10,8 @@ parent_dir = "./denoised_audio/"
 filelist = list(os.walk(parent_dir))[0][2]
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--languages", default="CJE")
-    parser.add_argument("--whisper_size", default="medium")
+    parser.add_argument("--languages", default="C")
+    parser.add_argument("--whisper_size", default="large")
     args = parser.parse_args()
     if args.languages == "CJE":
         lang2token = {

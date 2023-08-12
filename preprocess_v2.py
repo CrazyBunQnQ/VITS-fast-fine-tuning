@@ -7,7 +7,7 @@ sys.setrecursionlimit(500000)  # Fix the error message of RecursionError: maximu
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--add_auxiliary_data", type=bool, help="Whether to add extra data as fine-tuning helper")
-    parser.add_argument("--languages", default="CJE")
+    parser.add_argument("--languages", default="C")
     args = parser.parse_args()
     if args.languages == "CJE":
         langs = ["[ZH]", "[JA]", "[EN]"]
@@ -138,8 +138,11 @@ if __name__ == "__main__":
             path, speaker, txt = line.split("|")
             if len(txt) > 150:
                 continue
-            cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
+            # cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
+            # 将 txt 中的 [ZH] 替换为空
+            cleaned_text = txt.replace("[ZH]", "")
             cleaned_text += "\n" if not cleaned_text.endswith("\n") else ""
+            print(path + "|" + str(speaker2id[speaker]) + "|" + cleaned_text)
             cleaned_new_annos.append(path + "|" + str(speaker2id[speaker]) + "|" + cleaned_text)
 
         final_annos = cleaned_new_annos
