@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 """
+Linux 中运行需要将所有 \\ 替换为 /
 Author: Jack Cui
 https://space.bilibili.com/331507846
 """
@@ -603,6 +604,7 @@ if __name__ == "__main__":
                 btn.click(train_btn,
                             inputs = [dataset_path, dataset_name, continue_train, max_epochs, whisper_model_size, batch_size],
                             outputs = text_output)            
-                
+
+    # linux 中需要注释掉下面这行
     webbrowser.open("http://127.0.0.1:7860")
     app.queue(concurrency_count=5, max_size=20).launch(server_name="0.0.0.0", server_port=7860)
