@@ -399,6 +399,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     lang2token = {
         'zh': "[ZH]",
         'ja': "[JA]",
+        "en": "[EN]",
     }
     if not torch.cuda.is_available():
         yield "抱歉无法训练，未检测到GPU"
@@ -452,7 +453,11 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
         model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
         speaker_annos = []
         for file in denoise_audio_filelist:
-            result = model.transcribe(file)
+            output_log += "{} 开始转录 {}...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file)
+            yield output_log
+            options = dict(beam_size=5, best_of=5)
+            transcribe_options = dict(task="transcribe", **options)
+            result = model.transcribe(file, word_timestamps=True, **transcribe_options)
             lang = result['language']
             if result['language'] not in list(lang2token.keys()):
                 output_log += "{} 【报错】{}不支持\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), lang)
@@ -533,7 +538,9 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
             path, speaker, txt = line.split("|")
             if len(txt) > 150:
                 continue
-            cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
+            # cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
+            # 将 txt 中的 [ZH] 替换为空
+            cleaned_text = txt.replace("[ZH]", "")
             cleaned_text += "\n" if not cleaned_text.endswith("\n") else ""
             cleaned_new_annos.append(path + "|" + str(speaker2id[speaker]) + "|" + cleaned_text)
 
@@ -597,5 +604,5 @@ if __name__ == "__main__":
                             inputs = [dataset_path, dataset_name, continue_train, max_epochs, whisper_model_size, batch_size],
                             outputs = text_output)            
                 
-    webbrowser.open("http://127.0.0.1:8088")
-    app.queue(concurrency_count=5, max_size=20).launch(server_name="127.0.0.1", server_port=8088)
+    webbrowser.open("http://127.0.0.1:7860")
+    app.queue(concurrency_count=5, max_size=20).launch(server_name="0.0.0.0", server_port=7860)
