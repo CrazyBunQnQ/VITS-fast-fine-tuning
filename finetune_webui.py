@@ -576,13 +576,27 @@ if __name__ == "__main__":
         for i in range(device_count):
             device_name = torch.cuda.get_device_name(i)
             print(f"设备编号 {i}: {device_name}")
-        print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
+        print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(torch.cuda.current_device())}")
     else:
         print("未发现可用 GPU 设备。")
     print("如果检测到多个显卡，且当前使用的的不是期望的显卡，则在 finetune_webui.py 文件中找到本行，手动指定下面一行代码的 GPU 编号")
+    print("PS: 如果修改下面一行代码，需要删掉＃号和一个空格，否则会报错")
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    print(f"当前 torch 的 cuda 版本: {torch.version.cuda}")
-    print("请确认 torch 的 cuda 版本与 Windows 命令行中 nvcc --version 输出的 CUDA 版本一致")
+    print("========================================================================================================")
+    print(f"当前 torch 的 CUDA 版本: {torch.version.cuda}")
+    # system_cuda_version = os.popen("nvcc --version | findstr release").read().split(",")[1].split(" ")[-1]
+    # 执行系统命令 nvcc --version 并赋值到 system_cuda_version，获取 CUDA 版本
+    system_cuda_version = os.popen("nvcc --version").read()
+    print(f"当前系统执行 nvcc --version 命令输出: {system_cuda_version}")
+    # 提取 system_cuda_version 中包含 release 的行中的 CUDA 版本
+    system_cuda_version = [line for line in system_cuda_version.split("\n") if "release" in line][0].split(",")[1].split(" ")[-1]
+    print(f"当前系统安装的 CUDA 版本: {system_cuda_version}")
+    print("请确认 torch 的 CUDA 版本与 Windows 命令行中 nvcc --version 输出的 CUDA 版本一致")
+    # 判断 system_cuda_version 与 torch.version.cuda 是否一致, 不一致则输出提示并推出
+    if system_cuda_version != torch.version.cuda:
+        print("当前 torch 的 CUDA 版本与 Windows 命令行中 nvcc --version 输出的 CUDA 版本不一致，请检查！")
+        print("请重装对应版本的 torch 依赖，或者电脑中重新安装对应版本的 CUDA！")
+        exit()
     print("========================================================================================================")
 
     app = gr.Blocks()
