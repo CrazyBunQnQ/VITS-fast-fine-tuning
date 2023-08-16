@@ -169,20 +169,27 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                                     os.path.join(hps.model_dir, "D_latest.pth"))
 
-            if hps.preserved > 0:
+            # if hps.preserved > 0:
+            #     utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
+            #                             os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
+            #     utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
+            #                             os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
+            #     old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
+            #                                         preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
+            #     old_d = utils.oldest_checkpoint_path(hps.model_dir, "D_[0-9]*.pth", preserved=hps.preserved)
+            #     if os.path.exists(old_g):
+            #         print(f"remove {old_g}")
+            #         os.remove(old_g)
+            #     if os.path.exists(old_d):
+            #         print(f"remove {old_d}")
+            #         os.remove(old_d)
+
+            # 如果 global_step 是 1000 的倍数，保存模型
+            if global_step % 1000 == 0:
                 utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
-                                        os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
+                                      os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
-                                        os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
-                old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
-                                                    preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
-                old_d = utils.oldest_checkpoint_path(hps.model_dir, "D_[0-9]*.pth", preserved=hps.preserved)
-                if os.path.exists(old_g):
-                    print(f"remove {old_g}")
-                    os.remove(old_g)
-                if os.path.exists(old_d):
-                    print(f"remove {old_d}")
-                    os.remove(old_d)
+                                      os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
 
         global_step += 1
         if epoch > hps.max_epochs:
@@ -451,6 +458,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
         denoise_audio_filelist = glob.glob(os.path.join(denoise_audio_dir, "*"))
         denoise_audio_filelist = sorted(denoise_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
 
+        output_log += "{} 开始加载 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
         model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
         speaker_annos = []
         for file in denoise_audio_filelist:
@@ -606,5 +614,5 @@ if __name__ == "__main__":
                             outputs = text_output)            
 
     # linux 中需要注释掉下面这行
-    webbrowser.open("http://127.0.0.1:7860")
-    app.queue(concurrency_count=5, max_size=20).launch(server_name="0.0.0.0", server_port=7860)
+    webbrowser.open("http://127.0.0.1:7861")
+    app.queue(concurrency_count=5, max_size=20).launch(server_name="0.0.0.0", server_port=7861)
