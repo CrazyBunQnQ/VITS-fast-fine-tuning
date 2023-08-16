@@ -239,6 +239,16 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
           epoch,
           100. * batch_idx / len(train_loader)))
         logger.info([x.item() for x in losses] + [global_step, lr])
+        # 输出指标: loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl, global_step, lr
+        # 1. 鉴别器的损失值（loss_disc）：鉴别器的损失值表示生成器生成的样本与真实样本之间的差异。较低的鉴别器损失值表明生成器生成的样本更接近真实样本，可以被认为是模型训练得好的指标。
+        # 2. 生成器的总损失值（loss_gen_all）：生成器的总损失值综合考虑了多个损失项，包括特征匹配损失、MSE损失、时长损失和KL散度损失等。较低的生成器总损失值表明生成器在多个方面的训练中表现良好。
+        # 3. 特征匹配损失（loss_fm）：特征匹配损失衡量生成器和鉴别器特征之间的差异。较低的特征匹配损失表示生成器生成的样本的特征与真实样本的特征更相似，可以用来判断生成器的性能。
+        # 4. MSE损失（loss_mel）：MSE损失是生成器输出的声谱图与真实声谱图之间的均方差损失。较低的MSE损失表示生成器能够更准确地生成目标声谱图，说明模型的生成能力较好。
+        # 5. 时长损失（loss_dur）：时长损失衡量生成器生成的语音样本的时长与目标时长之间的差异。较低的时长损失表示生成器能够准确地生成目标时长的语音样本。
+        # 6. KL散度损失（loss_kl）：KL散度损失用于度量生成器的潜在变量（latent variable）与先验分布之间的差异。较低的KL散度损失表示生成器的潜在变量能够更接近先验分布，从而生成更多样化和质量较高的样本。
+        # 7. 全局步数（global_step）：全局步数表示训练过程的迭代次数。通常情况下，模型经过更多的迭代次数会有更好的训练效果。
+        # 8. 学习率（lr）：学习率表示模型当前的学习速率。合适的学习率可以帮助模型更好地收敛和训练，因此较低的学习率可能对模型的训练效果有积极影响。
+        # 通过综合考虑和分析这些指标的数值和趋势，可以判断模型训练的好坏。例如，较低的损失值、合适的全局步数和学习率等，通常表示模型在训练过程中取得了较好的效果。然而，具体的判断还需要根据具体任务和数据集的特点来确定，需要结合实际情况进行综合评估。
 
         scalar_dict = {"loss/g/total": loss_gen_all, "loss/d/total": loss_disc_all, "learning_rate": lr, "grad_norm_g": grad_norm_g}
         scalar_dict.update({"loss/g/fm": loss_fm, "loss/g/mel": loss_mel, "loss/g/dur": loss_dur, "loss/g/kl": loss_kl})
