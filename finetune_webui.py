@@ -570,6 +570,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     
 
 if __name__ == "__main__":
+    print("========================================================================================================")
     if torch.cuda.is_available():
         device_count = torch.cuda.device_count()
         print(f"发现{device_count}个可用GPU设备：")
@@ -579,9 +580,11 @@ if __name__ == "__main__":
         print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
     else:
         print("未发现可用 GPU 设备。")
-    # 如果上面输出的不是期望的 GPU 设备，则手动指定 GPU 编号
+    print("如果检测到多个显卡，且当前使用的的不是期望的显卡，则在 finetune_webui.py 文件中找到本行，手动指定下面一行代码的 GPU 编号")
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    print(f"当前 torch 的 cuda 版本: {torch.version.cuda()}")
+    print(f"当前 torch 的 cuda 版本: {torch.version.cuda}")
+    print("请确认 torch 的 cuda 版本与 Windows 命令行中 nvcc --version 输出的 CUDA 版本一致")
+    print("========================================================================================================")
 
     app = gr.Blocks()
     with app:
