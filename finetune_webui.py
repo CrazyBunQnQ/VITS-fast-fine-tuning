@@ -304,7 +304,6 @@ def get_hparams(continue_train, max_epochs, init=True):
 
 def train_main(continue_train, max_epochs):
     n_gpus = torch.cuda.device_count()
-    print(f"n_gpus: {n_gpus}")
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '8000'
 
@@ -418,7 +417,6 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     lang2token = {
         'zh': "[ZH]",
         'ja': "[JA]",
-        "en": "[EN]",
     }
     if not torch.cuda.is_available():
         yield "抱歉无法训练，未检测到GPU"
@@ -558,9 +556,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
             path, speaker, txt = line.split("|")
             if len(txt) > 150:
                 continue
-            # cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
-            # 将 txt 中的 [ZH] 替换为空
-            cleaned_text = txt.replace("[ZH]", "")
+            cleaned_text = text._clean_text(txt, hps['data']['text_cleaners']).replace("[ZH]", "")
             cleaned_text += "\n" if not cleaned_text.endswith("\n") else ""
             cleaned_new_annos.append(path + "|" + str(speaker2id[speaker]) + "|" + cleaned_text)
 
