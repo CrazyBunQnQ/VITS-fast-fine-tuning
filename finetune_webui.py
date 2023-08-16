@@ -1,6 +1,5 @@
 # -*- coding:utf-8 -*-
 """
-Linux 中运行需要将所有 \\ 替换为 /
 Author: Jack Cui
 https://space.bilibili.com/331507846
 """
@@ -451,11 +450,11 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
         for file in raw_audio_filelist:
             if file.endswith(".wav"):
                 os.system(f"demucs --two-stems=vocals {file}")
-                output_log += "{} 【已完成】文件({})音频分离处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
+                output_log += "{} 【已完成】文件({})音频分离处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("/")[-1])
                 yield output_log
 
         for file in raw_audio_filelist:
-            fname = file.split("\\")[-1].replace(".wav", "")
+            fname = file.split("/")[-1].replace(".wav", "")
             wav, sr = torchaudio.load(os.path.join("separated", "htdemucs", fname, "vocals.wav"), frame_offset=0, num_frames=-1, normalize=True,
                                     channels_first=True)
             # merge two channels into one
@@ -463,14 +462,14 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
             if sr != target_sr:
                 wav = torchaudio.transforms.Resample(orig_freq=sr, new_freq=target_sr)(wav)
             torchaudio.save(os.path.join("denoised_audio", fname + ".wav"), wav, target_sr, channels_first=True)
-            output_log += "{} 【已完成】文件({})音频采样处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
+            output_log += "{} 【已完成】文件({})音频采样处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("/")[-1])
             yield output_log
 
         denoise_audio_filelist = glob.glob(os.path.join(denoise_audio_dir, "*"))
         denoise_audio_filelist = sorted(denoise_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
 
         output_log += "{} 开始加载 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
-        model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
+        model = whisper.load_model(whisper_model_size, download_root = "./whisper_model")
         speaker_annos = []
         for file in denoise_audio_filelist:
             output_log += "{} 开始转录 {}...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file)
@@ -484,7 +483,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
                 yield output_log
                 continue
             # segment audio based on segment results
-            fname = file.split("\\")[-1]
+            fname = file.split("/")[-1]
             character_name = fname.rstrip(".wav").split("_")[0]
             code = fname.rstrip(".wav").split("_")[1]
             if not os.path.exists(os.path.join("segmented_character_voice", character_name)):
@@ -601,7 +600,7 @@ if __name__ == "__main__":
                     label = "训练数据地址",
                     info = "wav音频文件，建议填写绝对路径",
                     lines = 1,
-                    placeholder = "F:\\Code\\VITS_fast_finetune\\raw_audio",
+                    placeholder = "F:/Code/VITS_fast_finetune/raw_audio",
                 )
                 dataset_name = gr.Textbox(
                     label = "模型名（角色名）",
@@ -624,6 +623,4 @@ if __name__ == "__main__":
                             inputs = [dataset_path, dataset_name, continue_train, max_epochs, whisper_model_size, batch_size],
                             outputs = text_output)            
 
-    # linux 中需要注释掉下面这行
-    webbrowser.open("http://127.0.0.1:7861")
     app.queue(concurrency_count=5, max_size=20).launch(server_name="0.0.0.0", server_port=7861)
