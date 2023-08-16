@@ -407,6 +407,7 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     lang2token = {
         'zh': "[ZH]",
         'ja': "[JA]",
+        "en": "[EN]",
     }
     if not torch.cuda.is_available():
         yield "抱歉无法训练，未检测到GPU"
