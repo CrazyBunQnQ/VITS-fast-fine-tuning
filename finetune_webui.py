@@ -34,7 +34,6 @@ import librosa
 import logging
 
 logging.getLogger('numba').setLevel(logging.WARNING)
-os.environ["CUDA_VISIBLE_DEVICES"] = torch.cuda.current_device()
 if torch.cuda.is_available():
     device_count = torch.cuda.device_count()
     print(f"发现{device_count}个可用GPU设备：")
@@ -44,6 +43,8 @@ if torch.cuda.is_available():
     print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
 else:
     print("未发现可用 GPU 设备。")
+# 如果上面输出的不是期望的 GPU 设备，则手动指定 GPU 编号
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import commons
 import utils
