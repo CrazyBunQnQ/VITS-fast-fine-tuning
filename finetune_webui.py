@@ -435,84 +435,94 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
         yield output_log
         raw_audio_dir = "raw_audio"
         denoise_audio_dir = "denoised_audio"
-        raw_audio_filelist = glob.glob(os.path.join(raw_audio_dir, "*.wav"))
-        raw_audio_filelist = sorted(raw_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
+        # 判断 denoised_audio 目录中是否有文件
+        if len(os.listdir(denoise_audio_dir)) == 0:
+            raw_audio_filelist = glob.glob(os.path.join(raw_audio_dir, "*.wav"))
+            raw_audio_filelist = sorted(raw_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
 
-        with open(os.path.join("configs", "finetune_speaker.json"), 'r', encoding = 'utf-8') as f:
-            hps = json.load(f)
-        target_sr = hps['data']['sampling_rate']
-        for file in raw_audio_filelist:
-            if file.endswith(".wav"):
-                os.system(f"demucs --two-stems=vocals {file}")
-                output_log += "{} 【已完成】文件({})音频分离处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
+            with open(os.path.join("configs", "finetune_speaker.json"), 'r', encoding = 'utf-8') as f:
+                hps = json.load(f)
+            target_sr = hps['data']['sampling_rate']
+            for file in raw_audio_filelist:
+                if file.endswith(".wav"):
+                    os.system(f"demucs --two-stems=vocals {file}")
+                    output_log += "{} 【已完成】文件({})音频分离处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
+                    yield output_log
+
+            for file in raw_audio_filelist:
+                fname = file.split("\\")[-1].replace(".wav", "")
+                wav, sr = torchaudio.load(os.path.join("separated", "htdemucs", fname, "vocals.wav"), frame_offset=0, num_frames=-1, normalize=True,
+                                          channels_first=True)
+                # merge two channels into one
+                wav = wav.mean(dim = 0).unsqueeze(0)
+                if sr != target_sr:
+                    wav = torchaudio.transforms.Resample(orig_freq=sr, new_freq=target_sr)(wav)
+                torchaudio.save(os.path.join("denoised_audio", fname + ".wav"), wav, target_sr, channels_first=True)
+                output_log += "{} 【已完成】文件({})音频采样处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
                 yield output_log
-
-        for file in raw_audio_filelist:
-            fname = file.split("\\")[-1].replace(".wav", "")
-            wav, sr = torchaudio.load(os.path.join("separated", "htdemucs", fname, "vocals.wav"), frame_offset=0, num_frames=-1, normalize=True,
-                                    channels_first=True)
-            # merge two channels into one
-            wav = wav.mean(dim = 0).unsqueeze(0)
-            if sr != target_sr:
-                wav = torchaudio.transforms.Resample(orig_freq=sr, new_freq=target_sr)(wav)
-            torchaudio.save(os.path.join("denoised_audio", fname + ".wav"), wav, target_sr, channels_first=True)
-            output_log += "{} 【已完成】文件({})音频采样处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
+            output_log += "{} 【已完成】音频文件降噪\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
             yield output_log
-        output_log += "{} 【已完成】音频文件降噪\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        yield output_log
+        else:
+            output_log += "{} 【跳过..】降噪目录 {} 中已存在音频文件, 跳过音频降噪\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), denoise_audio_dir)
+            yield output_log
 
         output_log += "{} 【开始..】音频文件转录\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         yield output_log
-        denoise_audio_filelist = glob.glob(os.path.join(denoise_audio_dir, "*"))
-        denoise_audio_filelist = sorted(denoise_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
+        # 判断 long_character_anno.txt 文件是否存在
+        if not os.path.exists("long_character_anno.txt"):
+            denoise_audio_filelist = glob.glob(os.path.join(denoise_audio_dir, "*"))
+            denoise_audio_filelist = sorted(denoise_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
 
-        output_log += "{} 【加载..】 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
-        yield output_log
-        model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
-        speaker_annos = []
-        for file in denoise_audio_filelist:
-            output_log += "{} 开始转录 {}...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file)
+            output_log += "{} 【加载..】 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
             yield output_log
-            options = dict(beam_size=5, best_of=5)
-            transcribe_options = dict(task="transcribe", **options)
-            result = model.transcribe(file, word_timestamps=True, **transcribe_options)
-            lang = result['language']
-            if result['language'] not in list(lang2token.keys()):
-                output_log += "{} 【报错】{}不支持\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), lang)
+            model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
+            speaker_annos = []
+            for file in denoise_audio_filelist:
+                output_log += "{} 开始转录 {}...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file)
                 yield output_log
-                continue
-            # segment audio based on segment results
-            fname = file.split("\\")[-1]
-            character_name = fname.rstrip(".wav").split("_")[0]
-            code = fname.rstrip(".wav").split("_")[1]
-            if not os.path.exists(os.path.join("segmented_character_voice", character_name)):
-                os.mkdir(os.path.join("segmented_character_voice", character_name))
-            wav, sr = torchaudio.load(file, frame_offset = 0, num_frames = -1, normalize = True,
-                                    channels_first = True)
-            
-            for i, seg in enumerate(result['segments']):
-                start_time = seg['start']
-                end_time = seg['end']
-                text = seg['text']
-                text = lang2token[lang] + text.replace("\n", "") + lang2token[lang]
-                text = text + "\n"
-                wav_seg = wav[:, int(start_time*sr):int(end_time*sr)]
-                wav_seg_name = f"{character_name}_{code}_{i}.wav"
-                savepth = os.path.join("segmented_character_voice", character_name, wav_seg_name)
-                speaker_annos.append(savepth + "|" + character_name + "|" + text)
-                torchaudio.save(savepth, wav_seg, target_sr, channels_first=True)
+                options = dict(beam_size=5, best_of=5)
+                transcribe_options = dict(task="transcribe", **options)
+                result = model.transcribe(file, word_timestamps=True, **transcribe_options)
+                lang = result['language']
+                if result['language'] not in list(lang2token.keys()):
+                    output_log += "{} 【报错】{}不支持\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), lang)
+                    yield output_log
+                    continue
+                # segment audio based on segment results
+                fname = file.split("\\")[-1]
+                character_name = fname.rstrip(".wav").split("_")[0]
+                code = fname.rstrip(".wav").split("_")[1]
+                if not os.path.exists(os.path.join("segmented_character_voice", character_name)):
+                    os.mkdir(os.path.join("segmented_character_voice", character_name))
+                wav, sr = torchaudio.load(file, frame_offset = 0, num_frames = -1, normalize = True,
+                                        channels_first = True)
 
-            output_log += "{} 【已完成】文件({})音频识别\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), fname)
+                for i, seg in enumerate(result['segments']):
+                    start_time = seg['start']
+                    end_time = seg['end']
+                    text = seg['text']
+                    text = lang2token[lang] + text.replace("\n", "") + lang2token[lang]
+                    text = text + "\n"
+                    wav_seg = wav[:, int(start_time*sr):int(end_time*sr)]
+                    wav_seg_name = f"{character_name}_{code}_{i}.wav"
+                    savepth = os.path.join("segmented_character_voice", character_name, wav_seg_name)
+                    speaker_annos.append(savepth + "|" + character_name + "|" + text)
+                    torchaudio.save(savepth, wav_seg, target_sr, channels_first=True)
+
+                output_log += "{} 【已完成】文件({})音频识别\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), fname)
+                yield output_log
+
+            if len(speaker_annos) == 0:
+                output_log += "{} 音频文件识别失败\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+            with open("long_character_anno.txt", 'w', encoding='utf-8') as f:
+                for line in speaker_annos:
+                    f.write(line)
+
+            output_log += "{} 【已完成】音频转录txt文本生成\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
             yield output_log
-
-        if len(speaker_annos) == 0:
-            output_log += "{} 音频文件识别失败\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        with open("long_character_anno.txt", 'w', encoding='utf-8') as f:
-            for line in speaker_annos:
-                f.write(line)
-
-        output_log += "{} 【已完成】音频转录txt文本生成\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        yield output_log
+        else:
+            output_log += "{} 【跳过..】音频转录txt文本 long_character_anno.txt 已存在, 跳过音频转录\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+            yield output_log
 
         # 数据预处理
         output_log += "{} 【开始..】数据预处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
