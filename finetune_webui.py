@@ -585,8 +585,12 @@ if __name__ == "__main__":
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     print("========================================================================================================")
     print(f"当前 torch 的 CUDA 版本: {torch.version.cuda}")
+    # system_cuda_version = os.popen("nvcc --version | findstr release").read().split(",")[1].split(" ")[-1]
     # 执行系统命令 nvcc --version 并赋值到 system_cuda_version，获取 CUDA 版本
-    system_cuda_version = os.popen("nvcc --version | findstr release").read().split(",")[1].split(" ")[-1]
+    system_cuda_version = os.popen("nvcc --version").read()
+    print(f"当前系统执行 nvcc --version 命令输出: {system_cuda_version}")
+    # 提取 system_cuda_version 中包含 release 的行中的 CUDA 版本
+    system_cuda_version = [line for line in system_cuda_version.split("\n") if "release" in line][0].split(",")[1].split(" ")[-1]
     print(f"当前系统安装的 CUDA 版本: {system_cuda_version}")
     print("请确认 torch 的 CUDA 版本与 Windows 命令行中 nvcc --version 输出的 CUDA 版本一致")
     # 判断 system_cuda_version 与 torch.version.cuda 是否一致, 不一致则输出提示并推出
