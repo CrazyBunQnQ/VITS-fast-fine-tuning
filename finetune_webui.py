@@ -414,6 +414,8 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     if not os.path.exists(dataset_path):
         yield "{} 输入错误，目录不存在，请检查。".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     else:
+        output_log = "{} 【开始..】音频文件命名修改\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        yield output_log
         wav_names = os.listdir(dataset_path)
         for wav_name in wav_names:
             if wav_name[-4:] != ".wav":
@@ -425,10 +427,12 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
         wav_paths = glob.glob(os.path.join(dataset_path, "*.wav.tmp"))
         for wav_path in wav_paths:
             shutil.move(wav_path, wav_path[:-4])
-        output_log = "{} 【已完成】音频文件命名修改\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        output_log += "{} 【已完成】音频文件命名修改\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         yield output_log
 
 
+        output_log += "{} 【开始..】音频降噪...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        yield output_log
         raw_audio_dir = "raw_audio"
         denoise_audio_dir = "denoised_audio"
         raw_audio_filelist = glob.glob(os.path.join(raw_audio_dir, "*.wav"))
@@ -454,11 +458,16 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
             torchaudio.save(os.path.join("denoised_audio", fname + ".wav"), wav, target_sr, channels_first=True)
             output_log += "{} 【已完成】文件({})音频采样处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), file.split("\\")[-1])
             yield output_log
+        output_log += "{} 【已完成】音频文件降噪\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        yield output_log
 
+        output_log += "{} 【开始..】音频文件转录\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        yield output_log
         denoise_audio_filelist = glob.glob(os.path.join(denoise_audio_dir, "*"))
         denoise_audio_filelist = sorted(denoise_audio_filelist, key = lambda x: int(x.split("_")[-1].split(".")[0]))
 
-        output_log += "{} 开始加载 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
+        output_log += "{} 【加载..】 {} 模型...\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), whisper_model_size)
+        yield output_log
         model = whisper.load_model(whisper_model_size, download_root = ".\\whisper_model")
         speaker_annos = []
         for file in denoise_audio_filelist:
@@ -502,10 +511,12 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
             for line in speaker_annos:
                 f.write(line)
 
-        output_log += "{} 【已完成】音频对应txt文本生成\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        output_log += "{} 【已完成】音频转录txt文本生成\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         yield output_log
 
         # 数据预处理
+        output_log += "{} 【开始..】数据预处理\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        yield output_log
         new_annos = []
         if os.path.exists("long_character_anno.txt"):
             with open("long_character_anno.txt", 'r', encoding='utf-8') as f:
