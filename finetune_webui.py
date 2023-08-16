@@ -34,17 +34,6 @@ import librosa
 import logging
 
 logging.getLogger('numba').setLevel(logging.WARNING)
-if torch.cuda.is_available():
-    device_count = torch.cuda.device_count()
-    print(f"发现{device_count}个可用GPU设备：")
-    for i in range(device_count):
-        device_name = torch.cuda.get_device_name(i)
-        print(f"设备编号 {i}: {device_name}")
-    print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
-else:
-    print("未发现可用 GPU 设备。")
-# 如果上面输出的不是期望的 GPU 设备，则手动指定 GPU 编号
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import commons
 import utils
@@ -581,6 +570,19 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     
 
 if __name__ == "__main__":
+    if torch.cuda.is_available():
+        device_count = torch.cuda.device_count()
+        print(f"发现{device_count}个可用GPU设备：")
+        for i in range(device_count):
+            device_name = torch.cuda.get_device_name(i)
+            print(f"设备编号 {i}: {device_name}")
+        print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
+    else:
+        print("未发现可用 GPU 设备。")
+    # 如果上面输出的不是期望的 GPU 设备，则手动指定 GPU 编号
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    print(f"当前 torch 的 cuda 版本: {torch.version.cuda()}")
+
     app = gr.Blocks()
     with app:
         with gr.Row():
