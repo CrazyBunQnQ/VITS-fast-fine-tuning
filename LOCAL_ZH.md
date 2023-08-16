@@ -4,7 +4,7 @@
 1. 克隆此存储库;
 2. 运行 `pip install -r requirements.txt`;
    > 其中 `pyopenjtalk` 可能需要添加 `--no-build-isolation` 参数
-3. 安装 GPU 版本 PyTorch：（确保您已安装 CUDA 11.6 或 11.7 或 11.8）
+3. 安装对应 GPU 版本的 PyTorch：（确保您电脑上已安装 CUDA 11.6 或 11.7 或 11.8）
     ```
    # CUDA 11.6
     pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu116

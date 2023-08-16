@@ -34,6 +34,16 @@ import librosa
 import logging
 
 logging.getLogger('numba').setLevel(logging.WARNING)
+os.environ["CUDA_VISIBLE_DEVICES"] = torch.cuda.current_device()
+if torch.cuda.is_available():
+    device_count = torch.cuda.device_count()
+    print(f"发现{device_count}个可用GPU设备：")
+    for i in range(device_count):
+        device_name = torch.cuda.get_device_name(i)
+        print(f"设备编号 {i}: {device_name}")
+    print(f"当前使用显卡 {torch.cuda.current_device()}: {torch.cuda.get_device_name(i)}")
+else:
+    print("未发现可用 GPU 设备。")
 
 import commons
 import utils
@@ -294,6 +304,7 @@ def get_hparams(continue_train, max_epochs, init=True):
 
 def train_main(continue_train, max_epochs):
     n_gpus = torch.cuda.device_count()
+    print(f"n_gpus: {n_gpus}")
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '8000'
 
@@ -598,7 +609,7 @@ if __name__ == "__main__":
                     lines = 1,
                     placeholder = "jackcui_test",
                 )
-                continue_train = gr.Radio(["是", "否"], value = "是", label = "是否重新训练", info = "重新训练选择是，接着已经保存的模型继续训练选择否")
+                continue_train = gr.Radio(["否", "是"], value = "是", label = "是否重新训练", info = "重新训练选择是，接着已经保存的模型继续训练选择否")
                 whisper_model_size = gr.Radio(["tiny", "base", "small", "medium", "large"], value = "medium", label = "语音识别模型", info = "8G显存选medium，8G以上选large")
                 max_epochs = gr.Slider(2, 1000, value = 200, label = "训练epochs次数", info = "迭代训练的轮次，默认200")
                 batch_size = gr.Slider(2, 256, step = 2, value = 4, label = "batch_size大小", info = "越大训练越快，显存消耗越大")
