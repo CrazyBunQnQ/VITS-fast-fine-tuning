@@ -57,6 +57,13 @@ from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 torch.backends.cudnn.benchmark = True
 global_step = 0
 
+min_loss_disc = None
+min_loss_gen = None
+min_loss_fm = None
+min_loss_mel = None
+min_loss_dur = None
+min_loss_kl = None
+
 def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loaders, logger, writers):
     net_g, net_d = nets
     optim_g, optim_d = optims
@@ -74,12 +81,12 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
     net_g.train()
     net_d.train()
 
-    min_loss_disc = None
-    min_loss_gen = None
-    min_loss_fm = None
-    min_loss_mel = None
-    min_loss_dur = None
-    min_loss_kl = None
+    global min_loss_disc
+    global min_loss_gen
+    global min_loss_fm
+    global min_loss_mel
+    global min_loss_dur
+    global min_loss_kl
 
     for batch_idx, (x, x_lengths, spec, spec_lengths, y, y_lengths, speakers) in enumerate(tqdm(train_loader)):
         x, x_lengths = x.cuda(rank, non_blocking=True), x_lengths.cuda(rank, non_blocking=True)
@@ -145,28 +152,34 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                 lr = optim_g.param_groups[0]['lr']
                 is_all_min = True
                 # 记录 loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl 历史最小值
-                if min_loss_disc is None or min_loss_disc > loss_disc:
-                    min_loss_disc = loss_disc
+                if min_loss_disc is None or min_loss_disc > loss_disc.item():
+                    print(f"cur_min_loss_disc: {min_loss_disc}, cur_loss_disc: {loss_disc.item()}")
+                    min_loss_disc = loss_disc.item()
                 else:
                     is_all_min = False
-                if min_loss_gen is None or min_loss_gen > loss_gen:
-                    min_loss_gen = loss_gen
+                if min_loss_gen is None or min_loss_gen > loss_gen.item():
+                    print(f"cur_min_loss_gen: {min_loss_gen}, cur_loss_gen: {loss_gen.item()}")
+                    min_loss_gen = loss_gen.item()
                 else:
                     is_all_min = False
-                if min_loss_fm is None or min_loss_fm > loss_fm:
-                    min_loss_fm = loss_fm
+                if min_loss_fm is None or min_loss_fm > loss_fm.item():
+                    print(f"cur_min_loss_fm: {min_loss_fm}, cur_loss_fm: {loss_fm.item()}")
+                    min_loss_fm = loss_fm.item()
                 else:
                     is_all_min = False
-                if min_loss_mel is None or min_loss_mel > loss_mel:
-                    min_loss_mel = loss_mel
+                if min_loss_mel is None or min_loss_mel > loss_mel.item():
+                    print(f"cur_min_loss_mel: {min_loss_mel}, cur_loss_mel: {loss_mel.item()}")
+                    min_loss_mel = loss_mel.item()
                 else:
                     is_all_min = False
-                if min_loss_dur is None or min_loss_dur > loss_dur:
-                    min_loss_dur = loss_dur
+                if min_loss_dur is None or min_loss_dur > loss_dur.item():
+                    print(f"cur_min_loss_dur: {min_loss_dur}, cur_loss_dur: {loss_dur.item()}")
+                    min_loss_dur = loss_dur.item()
                 else:
                     is_all_min = False
-                if min_loss_kl is None or min_loss_kl > loss_kl:
-                    min_loss_kl = loss_kl
+                if min_loss_kl is None or min_loss_kl > loss_kl.item():
+                    print(f"cur_min_loss_kl: {min_loss_kl}, cur_loss_kl: {loss_kl.item()}")
+                    min_loss_kl = loss_kl.item()
                 else:
                     is_all_min = False
                 losses = [loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl]
@@ -208,6 +221,8 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                                         os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                                         os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
+                logger.info('save better model: {}'.format(global_step))
+                logger.info([min_loss_disc, min_loss_gen, min_loss_fm, min_loss_mel, min_loss_dur, min_loss_kl])
             #     old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
             #                                         preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
             #     old_d = utils.oldest_checkpoint_path(hps.model_dir, "D_[0-9]*.pth", preserved=hps.preserved)
@@ -224,6 +239,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                                       os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                                       os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
+                logger.info('save better model: {}'.format(global_step))
 
         global_step += 1
         if epoch > hps.max_epochs:
@@ -440,8 +456,6 @@ def train_btn(dataset_path, dataset_name, continue_train, max_epochs, whisper_mo
     output_log = ""
     lang2token = {
         'zh': "[ZH]",
-        'ja': "[JA]",
-        "en": "[EN]",
     }
     if not torch.cuda.is_available():
         yield "抱歉无法训练，未检测到GPU"
