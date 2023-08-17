@@ -57,12 +57,7 @@ from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 torch.backends.cudnn.benchmark = True
 global_step = 0
 
-min_loss_disc = None
-min_loss_gen = None
-min_loss_fm = None
-min_loss_mel = None
-min_loss_dur = None
-min_loss_kl = None
+pre_sum = 0
 
 def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loaders, logger, writers):
     net_g, net_d = nets
@@ -81,12 +76,8 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
     net_g.train()
     net_d.train()
 
-    global min_loss_disc
-    global min_loss_gen
-    global min_loss_fm
-    global min_loss_mel
-    global min_loss_dur
-    global min_loss_kl
+    global pre_sum
+    global min_sum
 
     for batch_idx, (x, x_lengths, spec, spec_lengths, y, y_lengths, speakers) in enumerate(tqdm(train_loader)):
         x, x_lengths = x.cuda(rank, non_blocking=True), x_lengths.cuda(rank, non_blocking=True)
@@ -147,46 +138,27 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
         scaler.update()
 
         if rank == 0:
-            is_all_min = False
+            min_sum = 0
             if global_step % hps.train.log_interval == 0:
                 lr = optim_g.param_groups[0]['lr']
-                is_all_min = True
-                # 记录 loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl 历史最小值
-                if min_loss_disc is None or min_loss_disc > loss_disc.item():
-                    print(f"cur_min_loss_disc: {min_loss_disc}, cur_loss_disc: {loss_disc.item()}")
-                    min_loss_disc = loss_disc.item()
-                else:
-                    is_all_min = False
-                if min_loss_gen is None or min_loss_gen > loss_gen.item():
-                    print(f"cur_min_loss_gen: {min_loss_gen}, cur_loss_gen: {loss_gen.item()}")
-                    min_loss_gen = loss_gen.item()
-                else:
-                    is_all_min = False
-                if min_loss_fm is None or min_loss_fm > loss_fm.item():
-                    print(f"cur_min_loss_fm: {min_loss_fm}, cur_loss_fm: {loss_fm.item()}")
-                    min_loss_fm = loss_fm.item()
-                else:
-                    is_all_min = False
-                if min_loss_mel is None or min_loss_mel > loss_mel.item():
-                    print(f"cur_min_loss_mel: {min_loss_mel}, cur_loss_mel: {loss_mel.item()}")
-                    min_loss_mel = loss_mel.item()
-                else:
-                    is_all_min = False
-                if min_loss_dur is None or min_loss_dur > loss_dur.item():
-                    print(f"cur_min_loss_dur: {min_loss_dur}, cur_loss_dur: {loss_dur.item()}")
-                    min_loss_dur = loss_dur.item()
-                else:
-                    is_all_min = False
-                if min_loss_kl is None or min_loss_kl > loss_kl.item():
-                    print(f"cur_min_loss_kl: {min_loss_kl}, cur_loss_kl: {loss_kl.item()}")
-                    min_loss_kl = loss_kl.item()
-                else:
-                    is_all_min = False
+                # 记录 loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl 求和历史最小值
+                min_sum += loss_disc.item()
+                min_sum += loss_gen.item()
+                min_sum += loss_fm.item()
+                min_sum += loss_mel.item()
+                min_sum += loss_dur.item()
+                min_sum += loss_kl.item()
+                if pre_sum == 0:
+                    pre_sum = min_sum
+
                 losses = [loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl]
                 logger.info('Train Epoch: {} [{:.0f}%]'.format(
                 epoch,
                 100. * batch_idx / len(train_loader)))
                 logger.info([x.item() for x in losses] + [global_step, lr])
+                if min_sum < pre_sum:
+                    logger.info('save better model: {}, min_sum: {}'.format(global_step, min_sum))
+                    logger.info([loss_disc, loss_gen, loss_fm, loss_mel, loss_dur, loss_kl])
 
                 scalar_dict = {"loss/g/total": loss_gen_all, "loss/d/total": loss_disc_all, "learning_rate": lr, "grad_norm_g": grad_norm_g}
                 scalar_dict.update({"loss/g/fm": loss_fm, "loss/g/mel": loss_mel, "loss/g/dur": loss_dur, "loss/g/kl": loss_kl})
@@ -205,6 +177,13 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                 global_step=global_step,
                 images=image_dict,
                 scalars=scalar_dict)
+                if min_sum < pre_sum:
+                # if min_sum < pre_sum and global_step > 200:
+                    pre_sum = min_sum
+                    utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
+                                          os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
+                    utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
+                                          os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
 
             if global_step % hps.train.eval_interval == 0:
 
@@ -216,30 +195,12 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                                     os.path.join(hps.model_dir, "D_latest.pth"))
 
-            if is_all_min:
-                utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
-                                        os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
-                utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
-                                        os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
-                logger.info('save better model: {}'.format(global_step))
-                logger.info([min_loss_disc, min_loss_gen, min_loss_fm, min_loss_mel, min_loss_dur, min_loss_kl])
-            #     old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
-            #                                         preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
-            #     old_d = utils.oldest_checkpoint_path(hps.model_dir, "D_[0-9]*.pth", preserved=hps.preserved)
-            #     if os.path.exists(old_g):
-            #         print(f"remove {old_g}")
-            #         os.remove(old_g)
-            #     if os.path.exists(old_d):
-            #         print(f"remove {old_d}")
-            #         os.remove(old_d)
-
             # 如果 global_step 是 1000 的倍数，保存模型
             if global_step % 1000 == 0:
                 utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
                                       os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
                 utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                                       os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
-                logger.info('save better model: {}'.format(global_step))
 
         global_step += 1
         if epoch > hps.max_epochs:
