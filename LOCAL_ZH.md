@@ -86,7 +86,9 @@
    2. 将重命名的视频文件放在 `./video_data/` 目录
 10. 处理所有音频数据。
    ```
-   # 视频转音频
+   # 下载视频, 读取 ./speaker_links.txt 中的链接, 输出到 ./video_data 目录
+   python scripts/download_video.py
+   # 视频转音频, 读取 ./video_data 目录下的视频文件, 输出到 ./raw_audio 目录
    python scripts/video2audio.py
    # 降噪音频, 读取 ./raw_audio 目录下的音频文件, 输出到 ./denoised_audio 目录(中途会在 ./separated/htdemucs/{file}/vocals.wav 生成分离的文件)
    python scripts/denoise_audio.py

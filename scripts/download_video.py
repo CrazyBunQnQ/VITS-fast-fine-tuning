@@ -2,13 +2,13 @@ import os
 import random
 import shutil
 from concurrent.futures import ThreadPoolExecutor
-from google.colab import files
+# from google.colab import files
 
-basepath = os.getcwd()
-uploaded = files.upload()  # 上传文件
-for filename in uploaded.keys():
-    assert (filename.endswith(".txt")), "speaker-videolink info could only be .txt file!"
-    shutil.move(os.path.join(basepath, filename), os.path.join("./speaker_links.txt"))
+# basepath = os.getcwd()
+# uploaded = files.upload()  # 上传文件
+# for filename in uploaded.keys():
+#     assert (filename.endswith(".txt")), "speaker-videolink info could only be .txt file!"
+#     shutil.move(os.path.join(basepath, filename), os.path.join("./speaker_links.txt"))
 
 
 def generate_infos():

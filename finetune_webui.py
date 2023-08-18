@@ -281,6 +281,8 @@ def get_hparams(continue_train, max_epochs, init=True):
     else:
         drop_speaker_embed = True
         cont = False
+    print(f"继续训练：{continue_train}")
+    print(f"删除已存在的角色：{drop_speaker_embed}")
 
     config_path = os.path.join("configs", "modified_finetune_speaker.json")
     config_save_path = os.path.join(model_dir, "config.json")
@@ -656,10 +658,10 @@ if __name__ == "__main__":
                     lines = 1,
                     placeholder = "jackcui_test",
                 )
-                continue_train = gr.Radio(["否", "是"], value = "是", label = "是否重新训练", info = "重新训练选择是，接着已经保存的模型继续训练选择否")
-                whisper_model_size = gr.Radio(["tiny", "base", "small", "medium", "large"], value = "medium", label = "语音识别模型", info = "8G显存选medium，8G以上选large")
-                max_epochs = gr.Slider(2, 1000, value = 200, label = "训练epochs次数", info = "迭代训练的轮次，默认200")
-                batch_size = gr.Slider(2, 256, step = 2, value = 4, label = "batch_size大小", info = "越大训练越快，显存消耗越大")
+                continue_train = gr.Radio(["是", "否"], value="是", label="是否继续训练", info="继续训练选择是，接着已经保存的模型和角色继续训练；重新选择否，会删除已保存的模型和角色重新训练")
+                whisper_model_size = gr.Radio(["tiny", "base", "small", "medium", "large"], value="large", label="语音识别模型", info="8G显存选medium，8G以上选large")
+                max_epochs = gr.Slider(2, 1000, value=1000, label="训练epochs次数", info="迭代训练的轮次，默认1000")
+                batch_size = gr.Slider(2, 256, step=2, value=24, label="batch_size大小", info="越大训练越快，显存消耗越大")
 
             with gr.Column():
                 text_output = gr.TextArea(
